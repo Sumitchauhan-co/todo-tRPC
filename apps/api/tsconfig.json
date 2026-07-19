@@ -1,0 +1,15 @@
+{
+  "extends": "@repo/typescript-config/node.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "module": "NodeNext",
+    "declarationMap": false,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src"],
+  "ts-node": {
+    "swc": true
+  }
+}

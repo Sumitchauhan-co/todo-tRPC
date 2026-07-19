@@ -1,0 +1,91 @@
+import { todosTable } from "@repo/database/models/todo";
+import {
+  DeleteMethodOutputSchemaType,
+  deleteTodoMethodInputSchemaType,
+  TodoMethodInputSchemaType,
+  TodoMethodOutputSchemaType,
+  UpdateTodoMethodInputSchemaType,
+} from "./model";
+import { TRPCError } from "@trpc/server";
+import database, { eq } from "@repo/database";
+
+class TodoService {
+  public async getTodosMethod(
+    db: typeof database,
+  ): Promise<ReadonlyArray<TodoMethodOutputSchemaType>> {
+    const todos = await db.select().from(todosTable);
+
+    if (!todos || todos.length === 0) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "No tasks were found for this user account.",
+      });
+    }
+
+    return todos;
+  }
+
+  public async createTodoMethod(
+    db: typeof database,
+    createTodoInput: TodoMethodInputSchemaType,
+  ): Promise<TodoMethodOutputSchemaType> {
+    const [createdTodo] = await db
+      .insert(todosTable)
+      .values({
+        title: createTodoInput.title,
+        description: createTodoInput.description,
+        isCompleted: createTodoInput.isCompleted,
+      } as any)
+      .returning();
+
+    if (!createdTodo) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Todo failed to create" });
+    }
+
+    return createdTodo;
+  }
+
+  public async updateTodoMethod(
+    db: typeof database,
+    createTodoInput: UpdateTodoMethodInputSchemaType,
+  ): Promise<TodoMethodOutputSchemaType> {
+    const [updatedTodo] = await db
+      .update(todosTable)
+      .set({
+        title: createTodoInput.title,
+        description: createTodoInput.description,
+        isCompleted: createTodoInput.isCompleted,
+      } as any)
+      .returning();
+
+    if (!updatedTodo) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Todo failed to create" });
+    }
+
+    return updatedTodo;
+  }
+
+  public async deleteTodoMethod(
+    db: typeof database,
+    deleteTodoInput: deleteTodoMethodInputSchemaType,
+  ): Promise<DeleteMethodOutputSchemaType> {
+    const [deletedTodo] = await db
+      .delete(todosTable)
+      .where(eq(todosTable.id, deleteTodoInput.id))
+      .returning({ id: todosTable.id });
+
+    if (!deletedTodo) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "The task you are trying to delete does not exist.",
+      });
+    }
+
+    return {
+      success: true,
+      id: deletedTodo.id,
+    };
+  }
+}
+
+export default TodoService;

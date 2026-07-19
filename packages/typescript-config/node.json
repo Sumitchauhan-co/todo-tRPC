@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schemastore.org",
+  "display": "Node JS",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "moduleResolution": "nodenext",
+    "module": "nodenext"
+  }
+}
