@@ -15,6 +15,21 @@ interface JwtPayload {
   role: string;
 }
 
+function getJwtAccessSecret() {
+  return process.env.JWT_ACCESS_SECRET_TOKEN;
+}
+
+function getCookie(req: Request, name: string): string | undefined {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return undefined;
+
+  return cookieHeader
+    .split(";")
+    .map((cookie) => cookie.trim().split("="))
+    .find(([cookieName]) => cookieName === name)
+    ?.at(1);
+}
+
 function getValidUserFromAccess(req: Request): ContextUser | null {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
@@ -26,7 +41,12 @@ function getValidUserFromAccess(req: Request): ContextUser | null {
       throw new TRPCError({ code: "NOT_FOUND", message: "Missing or invalid authorization token" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as unknown as JwtPayload;
+    const jwtAccessSecret = getJwtAccessSecret();
+    if (!jwtAccessSecret) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "JWT access secret missing" });
+    }
+
+    const decoded = jwt.verify(token, jwtAccessSecret) as unknown as JwtPayload;
     return { id: decoded.sub, role: decoded.role };
   } catch {
     return null;
@@ -34,7 +54,8 @@ function getValidUserFromAccess(req: Request): ContextUser | null {
 }
 
 async function getRefreshedUser(req: Request, res: Response): Promise<ContextUser | null> {
-  const refreshToken = req.cookies?.refresh_token || req.headers["x-refresh-token"];
+  const refreshToken =
+    req.cookies?.refreshToken || getCookie(req, "refreshToken") || req.headers["x-refresh-token"];
   if (!refreshToken) return null;
 
   try {
@@ -42,13 +63,18 @@ async function getRefreshedUser(req: Request, res: Response): Promise<ContextUse
 
     res.setHeader("x-new-access-token", accessToken);
 
-    res.cookie("refresh_token", user.refreshToken, {
+    res.cookie("refreshToken", user.refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
 
-    const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET!) as any;
+    const jwtAccessSecret = getJwtAccessSecret();
+    if (!jwtAccessSecret) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "JWT access secret missing" });
+    }
+
+    const decoded = jwt.verify(accessToken, jwtAccessSecret) as JwtPayload;
     return { id: decoded.sub, role: decoded.role };
   } catch {
     return null;

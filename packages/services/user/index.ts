@@ -13,7 +13,7 @@ import {
   verifyRefreshToken,
   compareUserPassword,
   generateHashPassword,
-} from "./middleware";
+} from "./utils/token";
 import { JwtPayload } from "jsonwebtoken";
 
 class UserService {

@@ -15,13 +15,6 @@ class TodoService {
   ): Promise<ReadonlyArray<TodoMethodOutputSchemaType>> {
     const todos = await db.select().from(todosTable);
 
-    if (!todos || todos.length === 0) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "No tasks were found for this user account.",
-      });
-    }
-
     return todos;
   }
 
@@ -47,19 +40,20 @@ class TodoService {
 
   public async updateTodoMethod(
     db: typeof database,
-    createTodoInput: UpdateTodoMethodInputSchemaType,
+    updateTodoInput: UpdateTodoMethodInputSchemaType,
   ): Promise<TodoMethodOutputSchemaType> {
+    const { id, ...values } = updateTodoInput;
     const [updatedTodo] = await db
       .update(todosTable)
-      .set({
-        title: createTodoInput.title,
-        description: createTodoInput.description,
-        isCompleted: createTodoInput.isCompleted,
-      } as any)
+      .set(values)
+      .where(eq(todosTable.id, id))
       .returning();
 
     if (!updatedTodo) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Todo failed to create" });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "The task you are trying to update does not exist.",
+      });
     }
 
     return updatedTodo;

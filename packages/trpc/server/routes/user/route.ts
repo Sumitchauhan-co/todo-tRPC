@@ -51,7 +51,7 @@ export const authRouter = router({
     .input(z.object({}))
     .output(z.readonly(authMethodOutputSchema))
     .mutation(async ({ ctx }) => {
-      const currentRefreshToken = ctx.req.cookies?.refresh_token;
+      const currentRefreshToken = ctx.req.cookies?.refreshToken;
 
       if (!currentRefreshToken) {
         throw new TRPCError({

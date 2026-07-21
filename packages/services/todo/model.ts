@@ -11,6 +11,8 @@ export const todoMethodOutputSchema = z.object({
 
 export type TodoMethodOutputSchemaType = z.infer<typeof todoMethodOutputSchema>;
 
+export const todoListMethodInputSchema = z.object({}).optional();
+
 export const todoMethodInputSchema = z.object({
   title: z.string().describe("Title of the todo"),
   description: z.string().describe("Description of the todo"),
@@ -20,18 +22,16 @@ export const todoMethodInputSchema = z.object({
 export type TodoMethodInputSchemaType = z.infer<typeof todoMethodInputSchema>;
 
 export const updateTodoMethodInputSchema = z.object({
-  title: z.string().describe("Title of the todo").nullish(),
-  description: z.string().describe("Description of the todo").nullish(),
-  isCompleted: z.boolean().describe("Completion of the todo").default(false).nullish(),
+  id: z.uuid().describe("Unique identifier of the todo"),
+  title: z.string().describe("Title of the todo").optional(),
+  description: z.string().describe("Description of the todo").optional(),
+  isCompleted: z.boolean().describe("Completion of the todo").optional(),
 });
 
 export type UpdateTodoMethodInputSchemaType = z.infer<typeof updateTodoMethodInputSchema>;
 
 export const deleteTodoMethodInputSchema = z.object({
   id: z.uuid().describe("Unique identifier of the todo"),
-  title: z.string().describe("Title of the todo").nullish(),
-  description: z.string().describe("Description of the todo").nullish(),
-  isCompleted: z.boolean().describe("Completion of the todo").default(false).nullish(),
 });
 
 export type deleteTodoMethodInputSchemaType = z.infer<typeof deleteTodoMethodInputSchema>;
