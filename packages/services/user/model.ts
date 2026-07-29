@@ -42,3 +42,12 @@ export const signoutMethodOutputSchema = z.object({
 });
 
 export type SignoutMethodOutputSchemaType = z.infer<typeof signoutMethodOutputSchema>;
+
+export const signinWithProtoAuthInputSchema = z.object({
+  code: z.string(),
+  codeVerifier: z.string().optional(),
+});
+
+export const signinWithGoogleInputSchema = z.object({
+  code: z.string(),
+});

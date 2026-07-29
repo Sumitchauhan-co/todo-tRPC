@@ -13,8 +13,12 @@ import {
   verifyRefreshToken,
   compareUserPassword,
   generateHashPassword,
+  verifyAccessToken,
+  verifyToken,
 } from "./utils/token";
 import { JwtPayload } from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
+import axios from "axios";
 
 class UserService {
   public async getUserByEmailAndPassword(db: typeof database, email: string) {
@@ -191,6 +195,231 @@ class UserService {
       accessToken,
     };
   }
-}
 
+  public async signinWithGoogle(
+    db: typeof database,
+    code: string,
+  ): Promise<AuthMethodOutputSchemaType> {
+    const googleClient = new OAuth2Client(
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      "postmessage",
+    );
+
+    const { tokens } = await googleClient.getToken(code);
+    if (!tokens.id_token) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Failed to retrieve ID token from Google.",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Invalid Google token payload.",
+      });
+    }
+
+    const email = payload.email.toLowerCase().trim();
+
+    let user = await this.getUserByEmailAndPassword(db, email);
+
+    if (!user) {
+      const [newUser] = await db
+        .insert(usersTable)
+        .values({
+          email: email,
+          firstName: payload.given_name || "",
+          lastName: payload.family_name || "",
+        })
+        .returning();
+
+      if (!newUser) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create user account from Google.",
+        });
+      }
+      user = newUser;
+    }
+
+    const accessToken = await generateAccessToken({ sub: user.id, role: user.role });
+    const refreshToken = await generateRefreshToken({ sub: user.id, role: user.role });
+
+    const [updatedUser] = await db
+      .update(usersTable)
+      .set({ refreshToken })
+      .where(eq(usersTable.id, user.id))
+      .returning();
+
+    if (!updatedUser) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to assign refresh token.",
+      });
+    }
+
+    return {
+      user: {
+        id: user.id,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        refreshToken: updatedUser.refreshToken,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      accessToken,
+    };
+  }
+
+  public async signinWithProtoAuth(
+    db: typeof database,
+    code: string,
+    codeVerifier?: string,
+  ): Promise<AuthMethodOutputSchemaType> {
+    const protoAuthBackendUrl = process.env.PROTOAUTH_BACKEND_URL;
+
+    try {
+      const response = await axios.post(`${protoAuthBackendUrl}/o/token`, {
+        code,
+        client_id: process.env.NEXT_PUBLIC_PROTOAUTH_CLIENT_ID,
+        client_secret: process.env.PROTOAUTH_CLIENT_SECRET,
+        redirect_uri: process.env.PROTOAUTH_REDIRECT_URI,
+        grant_type: "authorization_code",
+        code_verifier: codeVerifier,
+      });
+
+      const result = response.data?.data || response.data;
+      const { id_token, access_token, refresh_token } = result;
+
+      if (!id_token) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to retrieve ID token from ProtoAuth.",
+        });
+      }
+
+      const decoded = (await verifyToken(id_token)) as JwtPayload & {
+        email?: string;
+        given_name?: string;
+        family_name?: string;
+        name?: string;
+      };
+
+      console.log("Decoded ID Token:", decoded);
+
+      if (!decoded || !decoded.sub) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid ID token payload." });
+      }
+
+      const email = decoded.email?.toLowerCase().trim() || "";
+      const firstName = decoded.given_name || "";
+      const lastName = decoded.family_name || "";
+
+      let user = null;
+
+      const [existingUser] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, email))
+        .limit(1);
+
+      user = existingUser;
+
+      if (!user) {
+        const [newUser] = await db
+          .insert(usersTable)
+          .values({
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            password: "",
+          })
+          .returning();
+
+        if (!newUser) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create user account from ProtoAuth.",
+          });
+        }
+        user = newUser;
+      }
+
+      const [updatedUser] = await db
+        .update(usersTable)
+        .set({ refreshToken: refresh_token })
+        .where(eq(usersTable.id, user.id))
+        .returning();
+
+      return {
+        user: {
+          id: user.id,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          refreshToken: updatedUser?.refreshToken ?? null,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+        accessToken: access_token,
+      };
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        console.error("ProtoAuth Server Error Details:", error.response?.data);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            error.response?.data?.message ||
+            error.response?.data?.error ||
+            "Failed to exchange code for token with ProtoAuth.",
+        });
+      }
+
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error?.message || "An unexpected error occurred during ProtoAuth signin.",
+      });
+    }
+  }
+
+  public async me(
+    db: typeof database,
+    userId: string,
+  ): Promise<AuthMethodOutputSchemaType["user"]> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+
+    if (!user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User session not found or account removed.",
+      });
+    }
+
+    return {
+      id: user.id,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      refreshToken: user.refreshToken,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+}
 export default UserService;

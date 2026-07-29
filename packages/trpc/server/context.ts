@@ -15,11 +15,21 @@ interface JwtPayload {
   role: string;
 }
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/",
+};
+
 function getJwtAccessSecret() {
   return process.env.JWT_ACCESS_SECRET_TOKEN;
 }
 
 function getCookie(req: Request, name: string): string | undefined {
+  if (req.cookies?.[name]) return req.cookies[name];
+
   const cookieHeader = req.headers.cookie;
   if (!cookieHeader) return undefined;
 
@@ -36,19 +46,21 @@ function getValidUserFromAccess(req: Request): ContextUser | null {
 
   try {
     const token = authHeader.split(" ")[1];
+    if (!token) return null;
 
-    if (!token) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Missing or invalid authorization token" });
+    const publicKey = process.env.JWT_PUBLIC_KEY?.replace(/\\n/g, "\n");
+
+    if (!publicKey) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "JWT public key missing" });
     }
 
-    const jwtAccessSecret = getJwtAccessSecret();
-    if (!jwtAccessSecret) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "JWT access secret missing" });
-    }
+    const decoded = jwt.verify(token, publicKey, {
+      algorithms: ["RS256"],
+    }) as unknown as JwtPayload;
 
-    const decoded = jwt.verify(token, jwtAccessSecret) as unknown as JwtPayload;
     return { id: decoded.sub, role: decoded.role };
-  } catch {
+  } catch (err) {
+    console.error("Access token verification failed:", err);
     return null;
   }
 }
@@ -63,11 +75,9 @@ async function getRefreshedUser(req: Request, res: Response): Promise<ContextUse
 
     res.setHeader("x-new-access-token", accessToken);
 
-    res.cookie("refreshToken", user.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    if (user.refreshToken) {
+      res.cookie("refreshToken", user.refreshToken, COOKIE_OPTIONS);
+    }
 
     const jwtAccessSecret = getJwtAccessSecret();
     if (!jwtAccessSecret) {

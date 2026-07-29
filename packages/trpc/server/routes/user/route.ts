@@ -4,6 +4,8 @@ import { publicProcedure, router } from "../../trpc";
 import {
   authMethodOutputSchema,
   signinMethodInputSchema,
+  signinWithGoogleInputSchema,
+  signinWithProtoAuthInputSchema,
   signoutMethodInputSchema,
   signoutMethodOutputSchema,
   signupMethodInputSchema,
@@ -17,8 +19,9 @@ const getPath = generatePath("/auth");
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  sameSite: "lax" as const,
   maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/",
 };
 
 export const authRouter = router({
@@ -91,5 +94,51 @@ export const authRouter = router({
         success: true,
         message: "Successfully signed out and sessions cleared.",
       };
+    }),
+
+  signinWithGoogle: publicProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/signinWithGoogle"), tags: TAGS } })
+    .input(signinWithGoogleInputSchema)
+    .output(z.readonly(authMethodOutputSchema))
+    .mutation(async ({ ctx, input }) => {
+      const { accessToken, user } = await userService.signinWithGoogle(ctx.db, input.code);
+
+      if (user.refreshToken) {
+        ctx.res.cookie("refreshToken", user.refreshToken, COOKIE_OPTIONS);
+      }
+
+      return {
+        user,
+        accessToken,
+      };
+    }),
+
+  signinWithProtoAuth: publicProcedure
+    .input(signinWithProtoAuthInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const result = await userService.signinWithProtoAuth(ctx.db, input.code, input.codeVerifier);
+
+      if (result.user.refreshToken) {
+        ctx.res.cookie("refreshToken", result.user.refreshToken, COOKIE_OPTIONS);
+      }
+
+      return result;
+    }),
+
+  me: publicProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/me"), tags: TAGS } })
+    .input(z.object({}))
+    .output(z.readonly(authMethodOutputSchema.pick({ user: true })))
+    .query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "No active session found.",
+        });
+      }
+
+      const user = await userService.me(ctx.db, ctx.user.id);
+
+      return { user };
     }),
 });
