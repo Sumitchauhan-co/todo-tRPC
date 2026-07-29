@@ -5,8 +5,6 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/bcrypt": "^6.0.0",
-    "@types/jsonwebtoken": "^9.0.10",
     "dotenv-cli": "^11.0.0",
     "typescript": "^5.9.3"
   },
@@ -14,11 +12,11 @@
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
     "@trpc/server": "^11.8.1",
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "axios": "^1.18.1",
-    "@types/bcrypt": "^5.0.2",
     "bcrypt": "^6.0.0",
     "google-auth-library": "^10.5.0",
-    "@types/jsonwebtoken": "^9.0.9",
     "jsonwebtoken": "^9.0.3",
     "zod": "^4.3.5"
   }
