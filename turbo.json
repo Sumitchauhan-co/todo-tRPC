@@ -5,7 +5,18 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "CLIENT_URL",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+        "PROTOAUTH_CLIENT_SECRET",
+        "PROTOAUTH_REDIRECT_URI",
+        "PROTOAUTH_BACKEND_URL",
+        "JWT_PUBLIC_KEY",
+        "NODE_ENV",
+        "NEXT_PUBLIC_*"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]
