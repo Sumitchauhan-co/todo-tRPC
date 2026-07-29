@@ -14,6 +14,10 @@
         "PROTOAUTH_REDIRECT_URI",
         "PROTOAUTH_BACKEND_URL",
         "JWT_PUBLIC_KEY",
+        "JWT_REFRESH_SECRET_TOKEN",
+        "JWT_ACCESS_SECRET_TOKEN",
+        "JWT_REFRESH_TOKEN_EXPIRY",
+        "JWT_ACCESS_TOKEN_EXPIRY",
         "NODE_ENV",
         "NEXT_PUBLIC_*"
       ]
