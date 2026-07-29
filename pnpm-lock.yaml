@@ -281,6 +281,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
       dotenv:
         specifier: ^17.2.3
         version: 17.4.2
@@ -300,9 +303,6 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
-      '@types/pg':
-        specifier: ^8.16.0
-        version: 8.20.0
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
