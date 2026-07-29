@@ -21,7 +21,7 @@ app.use(
       if (!origin) return callback(null, true);
 
       // Allow local development origins automatically in dev mode
-      if (env.NODE_ENV !== "prod" && origin.includes("localhost")) {
+      if (env.NODE_ENV !== "production" && origin.includes("localhost")) {
         return callback(null, true);
       }
 

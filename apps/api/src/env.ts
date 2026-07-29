@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   PORT: z.string().optional(),
-  NODE_ENV: z.enum(["development", "prod"]).default("development"),
+  NODE_ENV: z.enum(["development", "production"]).default("development"),
   NEXT_PUBLIC_API_URL: z.string().default("http://localhost:8000"),
   CLIENT_URL: z
     .string()
