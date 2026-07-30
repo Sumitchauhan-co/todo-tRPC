@@ -12,27 +12,11 @@ import cookieParser from "cookie-parser";
 
 export const app = express();
 
-const allowedOrigins = env.CLIENT_URL.split(",").map((url) => url.trim());
+console.log(env.CLIENT_URL)
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow server-to-server requests or CLI/Postman calls with no origin header
-      if (!origin) return callback(null, true);
-
-      // Allow local development origins automatically in dev mode
-      if (env.NODE_ENV !== "production" && origin.includes("localhost")) {
-        return callback(null, true);
-      }
-
-      // Check if the request origin matches allowed production client URLs
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      logger.warn(`CORS blocked request from origin: ${origin}`);
-      return callback(new Error(`CORS policy: Origin ${origin} is not allowed.`));
-    },
+    origin: env.CLIENT_URL,
     credentials: true, // Crucial for HTTP-only cookies (refreshToken)
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "x-refresh-token"],
