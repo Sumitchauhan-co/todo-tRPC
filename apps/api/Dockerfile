@@ -2,7 +2,7 @@ FROM node:20-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml .npmrc ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml .npmrc .pnpmfile.cjs ./
 
 COPY packages/database/package.json ./packages/database/
 COPY packages/services/package.json ./packages/services/
@@ -25,7 +25,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app/pnpm-lock.yaml /app/package.json /app/pnpm-workspace.yaml /app/.npmrc ./
+COPY --from=builder /app/pnpm-lock.yaml /app/package.json /app/pnpm-workspace.yaml /app/.npmrc /app/.pnpmfile.cjs ./
 COPY --from=builder /app/packages/database ./packages/database
 COPY --from=builder /app/packages/services ./packages/services
 COPY --from=builder /app/packages/trpc ./packages/trpc
