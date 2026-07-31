@@ -36,4 +36,4 @@ RUN pnpm install --prod --frozen-lockfile
 
 EXPOSE 8000
 
-CMD ["node", "apps/api/dist/index.js"]
+CMD ["pnpm", "--dir", "apps/api", "start"]

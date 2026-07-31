@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "db:migrate": "dotenv -- drizzle-kit migrate",
+    "db:migrate:prod": "node migrate.mjs",
     "db:generate": "dotenv -- drizzle-kit generate",
     "dev": "dotenv -- drizzle-kit studio"
   },
