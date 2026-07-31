@@ -7,7 +7,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().default("http://localhost:8000"),
   CLIENT_URL: z
     .string()
-    .default("http://localhost:3000")
+    .default("http://localhost:3000,https://todo-trpc-web.vercel.app")
     .describe("Comma-separated list of allowed frontend origins for CORS"),
 });
 
