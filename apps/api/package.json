@@ -26,9 +26,11 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^22.15.3",
+    "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "pg": "^8.16.3",
     "trpc-to-openapi": "^3.1.0",
     "zod": "^4.3.5"
   }

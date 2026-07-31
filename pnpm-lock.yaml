@@ -50,6 +50,9 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.20.1
+      bcrypt:
+        specifier: ^6.0.0
+        version: 6.0.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -59,6 +62,9 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      pg:
+        specifier: ^8.16.3
+        version: 8.22.0
       trpc-to-openapi:
         specifier: ^3.1.0
         version: 3.3.0(@trpc/server@11.18.0(typescript@5.9.3))(zod-openapi@5.4.6(zod@4.4.3))(zod@4.4.3)
