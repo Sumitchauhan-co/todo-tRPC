@@ -35,5 +35,5 @@ COPY --from=builder /app/apps/api ./apps/api
 RUN pnpm install --prod --frozen-lockfile
 
 EXPOSE 8000
-WORKDIR /app/apps/api
-CMD ["node", "dist/index.js"]
+
+CMD ["node", "apps/api/dist/index.js"]
