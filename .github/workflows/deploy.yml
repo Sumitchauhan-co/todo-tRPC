@@ -26,4 +26,4 @@ jobs:
           context: .
           file: ./apps/api/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/todo-backend:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/todo-backend:railway-20260731-0915-cors
