@@ -1,12 +1,14 @@
-// db.ts
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
 export { eq } from "drizzle-orm";
 
+const isProduction = process.env.NODE_ENV === "production";
+const hasSslAgnosticUrl = process.env.DATABASE_URL?.includes("sslmode=require");
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" 
+  ssl: isProduction && hasSslAgnosticUrl
     ? { rejectUnauthorized: false } 
     : undefined,
 });

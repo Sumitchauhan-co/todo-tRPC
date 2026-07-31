@@ -8,7 +8,7 @@ async function init() {
   try {
     const server = http.createServer(expressApplication);
     const PORT: number = env.PORT ? +env.PORT : 8000;
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       logger.info(`http server is running on PORT ${PORT}`);
     });
   } catch (err) {
