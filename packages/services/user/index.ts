@@ -13,8 +13,7 @@ import {
   verifyRefreshToken,
   compareUserPassword,
   generateHashPassword,
-  verifyAccessToken,
-  verifyToken,
+  verifyProtoAuthToken,
 } from "./utils/token";
 import { JwtPayload } from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
@@ -287,8 +286,17 @@ class UserService {
     codeVerifier?: string,
   ): Promise<AuthMethodOutputSchemaType> {
     const protoAuthBackendUrl = process.env.PROTOAUTH_BACKEND_URL;
-
     try {
+      console.log("ProtoAuth Token Exchange Request payload:", {
+        url: `${protoAuthBackendUrl}/o/token`,
+        code,
+        client_id: process.env.NEXT_PUBLIC_PROTOAUTH_CLIENT_ID,
+        client_secret: process.env.PROTOAUTH_CLIENT_SECRET ? "[REDACTED]" : undefined,
+        redirect_uri: process.env.PROTOAUTH_REDIRECT_URI,
+        grant_type: "authorization_code",
+        code_verifier: codeVerifier,
+      });
+
       const response = await axios.post(`${protoAuthBackendUrl}/o/token`, {
         code,
         client_id: process.env.NEXT_PUBLIC_PROTOAUTH_CLIENT_ID,
@@ -301,6 +309,12 @@ class UserService {
       const result = response.data?.data || response.data;
       const { id_token, access_token, refresh_token } = result;
 
+      console.log("Retrieved Tokens:", {
+        id_token: id_token ? `${id_token.substring(0, 15)}...` : null,
+        access_token: access_token ? `${access_token.substring(0, 15)}...` : null,
+        refresh_token: refresh_token ? `${refresh_token.substring(0, 15)}...` : null,
+      });
+
       if (!id_token) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -308,17 +322,20 @@ class UserService {
         });
       }
 
-      const decoded = (await verifyToken(id_token)) as JwtPayload & {
+      const decoded = (await verifyProtoAuthToken(id_token)) as JwtPayload & {
         email?: string;
         given_name?: string;
         family_name?: string;
         name?: string;
+        sub?: string; 
       };
-
       console.log("Decoded ID Token:", decoded);
 
       if (!decoded || !decoded.sub) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid ID token payload." });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid ID token payload.",
+        });
       }
 
       const email = decoded.email?.toLowerCase().trim() || "";
@@ -326,7 +343,6 @@ class UserService {
       const lastName = decoded.family_name || "";
 
       let user = null;
-
       const [existingUser] = await db
         .select()
         .from(usersTable)
@@ -385,15 +401,15 @@ class UserService {
             "Failed to exchange code for token with ProtoAuth.",
         });
       }
-
       if (error instanceof TRPCError) {
         throw error;
       }
-
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: error?.message || "An unexpected error occurred during ProtoAuth signin.",
-      });
+        message:
+          error?.message ||
+          "An unexpected error occurred during ProtoAuth signin.",
+        });
     }
   }
 
