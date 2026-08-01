@@ -287,15 +287,6 @@ class UserService {
   ): Promise<AuthMethodOutputSchemaType> {
     const protoAuthBackendUrl = process.env.PROTOAUTH_BACKEND_URL;
     try {
-      console.log("ProtoAuth Token Exchange Request payload:", {
-        url: `${protoAuthBackendUrl}/o/token`,
-        code,
-        client_id: process.env.NEXT_PUBLIC_PROTOAUTH_CLIENT_ID,
-        client_secret: process.env.PROTOAUTH_CLIENT_SECRET ? "[REDACTED]" : undefined,
-        redirect_uri: process.env.PROTOAUTH_REDIRECT_URI,
-        grant_type: "authorization_code",
-        code_verifier: codeVerifier,
-      });
 
       const response = await axios.post(`${protoAuthBackendUrl}/o/token`, {
         code,
@@ -308,12 +299,6 @@ class UserService {
 
       const result = response.data?.data || response.data;
       const { id_token, access_token, refresh_token } = result;
-
-      console.log("Retrieved Tokens:", {
-        id_token: id_token ? `${id_token.substring(0, 15)}...` : null,
-        access_token: access_token ? `${access_token.substring(0, 15)}...` : null,
-        refresh_token: refresh_token ? `${refresh_token.substring(0, 15)}...` : null,
-      });
 
       if (!id_token) {
         throw new TRPCError({
@@ -329,7 +314,6 @@ class UserService {
         name?: string;
         sub?: string; 
       };
-      console.log("Decoded ID Token:", decoded);
 
       if (!decoded || !decoded.sub) {
         throw new TRPCError({
